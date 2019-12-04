@@ -22,7 +22,6 @@ server.on('request', (req, res) => {
         return;
       }
       if (pathname.indexOf('/') > -1) {
-        console.log('/');
         res.statusCode = 400;
         res.end();
         return;
@@ -31,14 +30,12 @@ server.on('request', (req, res) => {
       const limitSizeStream = new LimitSizeStream({limit: LIMIT});
       req.pipe(limitSizeStream).pipe(writeStream);
       limitSizeStream.on('error', err => {
-        console.log('exeed');
         res.statusCode = 413;
         res.end();
         fs.unlink(filepath, () => {});
         return;
       });
       writeStream.on('error', err => {
-        console.log('err');
         if (err.code === 'EEXIST') {
           res.statusCode = 409;
           res.end();
@@ -51,9 +48,15 @@ server.on('request', (req, res) => {
       });
       writeStream.on('close', () => {
         res.statusCode = 201;
-        console.log('close');
         res.end();
       });
+      res.on('close', () => {
+        if (!res.finished) {
+          res.statusCode = 500;
+          fs.unlink(filepath, () => {});
+          res.end();
+        }
+      })
 
       break;
 
